@@ -50,3 +50,53 @@ Follow these steps carefully to execute the source code on your local environmen
 3. Run the following command to install PHPMailer: 
    ```bash
    composer install
+
+## ✨ ALL Features Included:
+
+### ✅ AI Financial Advisor (Smart Chatbot)
+* **Conversational Logging:** Easily add transactions using natural language (e.g., "Lunch at KFC 25").
+* **Automated Categorization:** Built-in NLP and merchant-matching logic instantly assigns the correct category.
+* **Personalized Insights:** Receive tailored budgeting advice and spending warnings based on your financial habits.
+
+### ✅ Dashboard
+* Real-time financial summary
+* Income vs Expenses charts
+* Spending by category visualization
+* Recent transactions list
+
+### ✅ Transactions Page
+* View all transactions in table format
+* Filter by type, category, and month
+* Add new income/expenses
+* Delete transactions
+* Full transaction history
+
+### ✅ Budgets Page
+* Set monthly budgets for each category
+* Track spending vs budget
+* Visual progress bars
+* Budget utilization alerts
+* Over-budget warnings
+
+### ✅ Reports Page
+* Comprehensive financial reports
+* Multiple time period options (current month, last month, 3 months, 6 months, year)
+* Income vs Expenses trend charts
+* Expense breakdown by category
+* Top spending categories
+* Average daily spending
+
+### ✅ Savings Goals
+* Create multiple savings goals
+* Track progress with visual indicators
+* Add contributions to goals
+* Target date tracking
+* Days remaining counter
+* Goal achievement notifications
+
+### ✅ Additional Features
+* Export data to CSV
+* Secure user authentication
+* Responsive design (works on all devices)
+* Professional UI/UX
+* Real-time updates
