@@ -21,10 +21,8 @@ $username = $_SESSION['username'];
 </head>
 <body>
     <div class="app-wrapper">
-        <!-- Include the sidebar -->
         <?php include 'sidebar.php'; ?>
 
-        <!-- Main Content -->
         <main class="main-container">
             <header class="page-header">
                 <h1 class="page-title">
@@ -40,7 +38,6 @@ $username = $_SESSION['username'];
                 </div>
             </header>
 
-            <!-- Budget Summary -->
             <div class="budget-summary">
                 <div class="summary-card">
                     <h3>Total Budget</h3>
@@ -56,7 +53,6 @@ $username = $_SESSION['username'];
                 </div>
             </div>
 
-            <!-- Budget Categories -->
             <div class="transactions-section">
                 <h3>Category Budgets</h3>
                 <div id="budget-list">
@@ -66,7 +62,6 @@ $username = $_SESSION['username'];
         </main>
     </div>
 
-    <!-- Edit Budget Modal -->
     <div class="modal" id="budget-modal">
         <div class="modal-backdrop" onclick="closeBudgetModal()"></div>
         <div class="modal-dialog">
@@ -84,6 +79,7 @@ $username = $_SESSION['username'];
                     <label>Monthly Budget ($)</label>
                     <input type="number" id="category-budget-edit" name="budget" min="0" step="0.01" required>
                 </div>
+
                 <div class="form-group">
                     <label>Icon (Font Awesome class)</label>
                     <input type="text" id="category-icon-edit" name="icon" required>
@@ -91,6 +87,7 @@ $username = $_SESSION['username'];
                         Browse icons at <a href="https://fontawesome.com/icons" target="_blank" style="color: var(--primary-blue);">fontawesome.com</a>
                     </small>
                 </div>
+
                 <div class="form-group">
                     <label>Color</label>
                     <select id="category-color-edit" name="color" required>
@@ -112,7 +109,6 @@ $username = $_SESSION['username'];
         </div>
     </div>
 
-    <!-- Add Category Modal -->
     <div class="modal" id="add-category-modal">
         <div class="modal-backdrop" onclick="closeAddCategoryModal()"></div>
         <div class="modal-dialog" style="max-width: 520px;">
@@ -124,7 +120,6 @@ $username = $_SESSION['username'];
             </div>
             <form id="add-category-form" style="padding: 24px 28px;">
 
-                <!-- Category Name -->
                 <div class="form-group" style="margin-bottom: 20px;">
                     <label style="font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
                         <i class="fas fa-tag" style="color: #5b7cff; font-size: 12px;"></i> Category Name
@@ -137,7 +132,6 @@ $username = $_SESSION['username'];
                         onblur="this.style.borderColor='#e5e7eb'; this.style.boxShadow='none'">
                 </div>
 
-                <!-- Type -->
                 <div class="form-group" style="margin-bottom: 20px;">
                     <label style="font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 10px; display: flex; align-items: center; gap: 6px;">
                         <i class="fas fa-exchange-alt" style="color: #5b7cff; font-size: 12px;"></i> Type
@@ -166,7 +160,6 @@ $username = $_SESSION['username'];
                     </div>
                 </div>
 
-                <!-- Icon & Color side by side -->
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
                     <div class="form-group" style="margin-bottom: 0;">
                         <label style="font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
@@ -183,6 +176,7 @@ $username = $_SESSION['username'];
                             <a href="https://fontawesome.com/icons" target="_blank" style="color: #5b7cff; text-decoration: none;">Browse icons ↗</a>
                         </small>
                     </div>
+                    
                     <div class="form-group" style="margin-bottom: 0;">
                         <label style="font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
                             <i class="fas fa-palette" style="color: #5b7cff; font-size: 12px;"></i> Color
@@ -214,7 +208,6 @@ $username = $_SESSION['username'];
                     </div>
                 </div>
 
-                <!-- Submit -->
                 <button type="submit"
                     style="width: 100%; padding: 13px; background: #3b82f6; color: white; border: none; border-radius: 10px; font-size: 14px; font-weight: 600; font-family: 'Poppins', sans-serif; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.1);"
                     onmouseover="this.style.background='#2563eb'; this.style.transform='translateY(-1px)'"
@@ -248,13 +241,13 @@ $username = $_SESSION['username'];
             expLabel.style.background = 'white';
         }
     }
+    
     // Attach radio change listeners after DOM is ready
     document.addEventListener('DOMContentLoaded', function() {
         document.querySelectorAll('input[name="type"]').forEach(r => r.addEventListener('change', updateTypeStyle));
     });
     </script>
 
-    <!-- Category Expenses Modal -->
     <div class="modal" id="category-expenses-modal">
         <div class="modal-backdrop" onclick="closeCategoryExpensesModal()"></div>
         <div class="modal-dialog" style="max-width: 800px;">

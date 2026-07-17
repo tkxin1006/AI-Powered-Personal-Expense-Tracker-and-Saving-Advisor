@@ -129,13 +129,17 @@ function displayBudgets(budgetsData) {
         // Track background: 15% opacity tint of the category color
         const trackColor = isOverBudget ? 'rgba(229,62,62,0.15)' : hexToRgba(budget.color, 0.15);
 
+        const iconDisplay = (budget.icon.includes('/') || budget.icon.includes('.'))
+            ? `<img src="${budget.icon}" style="width:14px; height:14px; object-fit:contain; vertical-align:middle; filter:brightness(0) invert(1);">`
+            : `<i class="fas ${budget.icon}"></i>`;
+
         const budgetCard = document.createElement('div');
         budgetCard.className = 'budget-card';
         budgetCard.innerHTML = `
             <div class="budget-header">
                 <div class="budget-info">
                     <span class="category-badge" style="background-color: ${budget.color}">
-                        <i class="fas ${budget.icon}"></i> ${budget.name}
+                        ${iconDisplay} ${budget.name}
                     </span>
                 </div>
                 <div class="budget-actions">
@@ -208,9 +212,19 @@ function editBudget(categoryId, categoryName, icon, color) {
     
     document.getElementById('category-id').value = categoryId;
     document.getElementById('category-name-edit').value = categoryName;
-    document.getElementById('category-icon-edit').value = icon;
     document.getElementById('category-color-edit').value = color;
     document.getElementById('category-budget-edit').value = budgetAmount.toFixed(2);
+    
+    const isCustomFile = icon.includes('/') || icon.includes('.');
+    if (isCustomFile) {
+        document.querySelector('input[name="icon_source_edit"][value="file"]').checked = true;
+        toggleIconSourceEdit('file');
+        document.getElementById('category-icon-edit').value = '';
+    } else {
+        document.querySelector('input[name="icon_source_edit"][value="class"]').checked = true;
+        toggleIconSourceEdit('class');
+        document.getElementById('category-icon-edit').value = icon;
+    }
     
     document.getElementById('budget-modal').classList.add('active');
 }
@@ -302,9 +316,13 @@ function deleteCategory(categoryId, categoryName) {
 
 // View category expenses
 function viewCategoryExpenses(categoryId, categoryName, icon, color) {
+    const iconDisplay = (icon.includes('/') || icon.includes('.'))
+        ? `<img src="${icon}" style="width:14px; height:14px; object-fit:contain; vertical-align:middle; filter:brightness(0) invert(1);">`
+        : `<i class="fas ${icon}"></i>`;
+
     document.getElementById('category-expenses-title').innerHTML = `
         <span class="category-badge" style="background-color: ${color}">
-            <i class="fas ${icon}"></i> ${categoryName}
+            ${iconDisplay} ${categoryName}
         </span> - Expenses
     `;
     document.getElementById('category-expenses-modal').classList.add('active');

@@ -13,8 +13,7 @@ $action = $_GET['action'] ?? '';
 
 /**
  * Automatically allocate budgets based on income
- * 
- * @param mysqli $conn Database connection
+ * * @param mysqli $conn Database connection
  * @param int $user_id User ID
  * @param float $income Income amount
  * @param bool $forceUpdate Whether to update existing budgets
@@ -132,8 +131,7 @@ function getCurrentMonthIncome($conn, $user_id) {
 
 /**
  * Update budgets when transactions change
- * 
- * @param mysqli $conn Database connection
+ * * @param mysqli $conn Database connection
  * @param int $user_id User ID
  * @return bool Whether budgets were updated
  */
@@ -494,10 +492,32 @@ switch ($action) {
     case 'update_budget':
         $category_id = $_POST['category_id'] ?? 0;
         $category_name = $_POST['category_name'] ?? '';
-        $icon = $_POST['icon'] ?? 'fa-tag';
         $color = $_POST['color'] ?? '#3b82f6';
         $budget = $_POST['budget'] ?? 0;
         
+        // Check if user uploaded a file instead
+        if (isset($_FILES['icon_image']) && $_FILES['icon_image']['error'] == 0) {
+            $upload_dir = 'uploads/icons/';
+            if (!is_dir($upload_dir)) mkdir($upload_dir, 0755, true);
+            $file_ext = pathinfo($_FILES['icon_image']['name'], PATHINFO_EXTENSION);
+            $icon = $upload_dir . 'icon_edit_' . uniqid() . '.' . $file_ext;
+            move_uploaded_file($_FILES['icon_image']['tmp_name'], $icon);
+        } else {
+            $icon = $_POST['icon'] ?? '';
+        }
+        
+        // Fall back to original file path if no modifications were sent
+        if (empty($icon) && isset($_POST['icon_source_edit']) && $_POST['icon_source_edit'] === 'file') {
+            $stmt_old = $conn->prepare("SELECT icon FROM categories WHERE id = ? AND user_id = ?");
+            $stmt_old->bind_param("ii", $category_id, $user_id);
+            $stmt_old->execute();
+            $icon = $stmt_old->get_result()->fetch_assoc()['icon'] ?? 'fa-tag';
+        }
+
+        if (empty($icon)) {
+             $icon = 'fa-tag';
+        }
+
         $stmt = $conn->prepare("
             UPDATE categories 
             SET name = ?, icon = ?, color = ?, budget = ?
@@ -513,11 +533,20 @@ switch ($action) {
         break;
     
     case 'add_category':
-        $name = $_POST['name'] ?? '';
+        $name = $_POST['category_name'] ?? $_POST['name'] ?? ''; // Added support for front-end name
         $type = $_POST['type'] ?? 'expense';
-        $icon = $_POST['icon'] ?? 'fa-tag';
         $color = $_POST['color'] ?? '#3b82f6';
         $budget = $_POST['budget'] ?? 0;
+        
+        if (isset($_FILES['icon_image']) && $_FILES['icon_image']['error'] == 0) {
+            $upload_dir = 'uploads/icons/';
+            if (!is_dir($upload_dir)) mkdir($upload_dir, 0755, true);
+            $file_ext = pathinfo($_FILES['icon_image']['name'], PATHINFO_EXTENSION);
+            $icon = $upload_dir . 'icon_add_' . uniqid() . '.' . $file_ext;
+            move_uploaded_file($_FILES['icon_image']['tmp_name'], $icon);
+        } else {
+            $icon = $_POST['icon'] ?? 'fa-tag';
+        }
         
         if (empty($name) || empty($type)) {
             echo json_encode(['success' => false, 'message' => 'Invalid data']);
@@ -592,239 +621,140 @@ switch ($action) {
         break;
     
     // Reports endpoints
-    // Add this to your api.php file - Replace the entire 'get_reports' case
-
-case 'get_reports':
-    $period = $_GET['period'] ?? 'current';
-    
-    // Calculate date range
-    $start_date = '';
-    $end_date = date('Y-m-d');
-    
-    switch ($period) {
-        case 'current':
-            // Current month - from 1st of this month to today
-            $start_date = date('Y-m-01');
-            $end_date = date('Y-m-d');
-            break;
-        case 'last':
-            // Last month - from 1st to last day of previous month
-            $start_date = date('Y-m-01', strtotime('first day of last month'));
-            $end_date = date('Y-m-t', strtotime('last day of last month'));
-            break;
-        case '3months':
-            // Last 3 months
-            $start_date = date('Y-m-01', strtotime('-3 months'));
-            break;
-        case '6months':
-            // Last 6 months
-            $start_date = date('Y-m-01', strtotime('-6 months'));
-            break;
-        case 'year':
-            // This year - from January 1st to today
-            $start_date = date('Y-01-01');
-            break;
-    }
-    
-    // Debug - you can remove this after confirming it works
-    error_log("Period: $period, Start: $start_date, End: $end_date");
-    
-    // Get income
-    $stmt = $conn->prepare("
-        SELECT COALESCE(SUM(amount), 0) as total 
-        FROM transactions 
-        WHERE user_id = ? AND type = 'income' 
-        AND transaction_date BETWEEN ? AND ?
-    ");
-    $stmt->bind_param("iss", $user_id, $start_date, $end_date);
-    $stmt->execute();
-    $income = $stmt->get_result()->fetch_assoc()['total'];
-    
-    // Get expenses
-    $stmt = $conn->prepare("
-        SELECT COALESCE(SUM(amount), 0) as total 
-        FROM transactions 
-        WHERE user_id = ? AND type = 'expense' 
-        AND transaction_date BETWEEN ? AND ?
-    ");
-    $stmt->bind_param("iss", $user_id, $start_date, $end_date);
-    $stmt->execute();
-    $expenses = $stmt->get_result()->fetch_assoc()['total'];
-    
-    $savings = $income - $expenses;
-    $days = max(1, (strtotime($end_date) - strtotime($start_date)) / (60 * 60 * 24));
-    $daily_avg = $expenses / $days;
-    
-    // FIXED: Get trend data - GROUP BY DAY for current/last month, BY MONTH for longer periods
-    if ($period === 'current' || $period === 'last') {
-        // Group by DAY for current month and last month
-        $stmt = $conn->prepare("
-            SELECT DATE(transaction_date) as period,
-                SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END) as income,
-                SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) as expenses
-            FROM transactions
-            WHERE user_id = ? AND transaction_date BETWEEN ? AND ?
-            GROUP BY DATE(transaction_date)
-            ORDER BY period
-        ");
-    } else {
-        // Group by MONTH for 3 months, 6 months, year
-        $stmt = $conn->prepare("
-            SELECT DATE_FORMAT(transaction_date, '%Y-%m') as period,
-                SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END) as income,
-                SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) as expenses
-            FROM transactions
-            WHERE user_id = ? AND transaction_date BETWEEN ? AND ?
-            GROUP BY period
-            ORDER BY period
-        ");
-    }
-    
-    $stmt->bind_param("iss", $user_id, $start_date, $end_date);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    
-    $trend = ['labels' => [], 'income' => [], 'expenses' => []];
-    while ($row = $result->fetch_assoc()) {
-        // Format the label based on period type
-        if ($period === 'current' || $period === 'last') {
-            // Format as "Jan 1", "Jan 2", etc. for daily view
-            $date = new DateTime($row['period']);
-            $trend['labels'][] = $date->format('M j'); // "Jan 1", "Jan 2"
-        } else {
-            // Format as "Jan", "Feb", etc. for monthly view
-            $date = new DateTime($row['period'] . '-01');
-            $trend['labels'][] = $date->format('M Y'); // "Jan 2026", "Feb 2026"
+    case 'get_reports':
+        $period = $_GET['period'] ?? 'current';
+        
+        // Calculate date range
+        $start_date = '';
+        $end_date = date('Y-m-d');
+        
+        switch ($period) {
+            case 'current':
+                // Current month - from 1st of this month to today
+                $start_date = date('Y-m-01');
+                $end_date = date('Y-m-d');
+                break;
+            case 'last':
+                // Last month - from 1st to last day of previous month
+                $start_date = date('Y-m-01', strtotime('first day of last month'));
+                $end_date = date('Y-m-t', strtotime('last day of last month'));
+                break;
+            case '3months':
+                // Last 3 months
+                $start_date = date('Y-m-01', strtotime('-3 months'));
+                break;
+            case '6months':
+                // Last 6 months
+                $start_date = date('Y-m-01', strtotime('-6 months'));
+                break;
+            case 'year':
+                // This year - from January 1st to today
+                $start_date = date('Y-01-01');
+                break;
         }
         
-        $trend['income'][] = floatval($row['income']);
-        $trend['expenses'][] = floatval($row['expenses']);
-    }
-    
-    // Get category breakdown
-    $stmt = $conn->prepare("
-        SELECT c.name, c.icon, c.color, SUM(t.amount) as total
-        FROM transactions t
-        JOIN categories c ON t.category_id = c.id
-        WHERE t.user_id = ? AND t.type = 'expense'
-        AND t.transaction_date BETWEEN ? AND ?
-        GROUP BY c.id
-        ORDER BY total DESC
-    ");
-    $stmt->bind_param("iss", $user_id, $start_date, $end_date);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    
-    $categories = [];
-    $total_expenses = floatval($expenses);
-    
-    while ($row = $result->fetch_assoc()) {
-        $categories[] = [
-            'name' => $row['name'],
-            'icon' => $row['icon'],
-            'color' => $row['color'],
-            'total' => floatval($row['total']),
-            'percentage' => $total_expenses > 0 ? (floatval($row['total']) / $total_expenses) * 100 : 0
-        ];
-    }
-
-    echo json_encode([
-        'success' => true,
-        'data' => [
-            'period' => $period,
-            'date_range' => [
-                'start' => $start_date,
-                'end' => $end_date
-            ],
-            'summary' => [
-                'income' => floatval($income),
-                'expenses' => floatval($expenses),
-                'savings' => floatval($savings),
-                'daily_avg' => floatval($daily_avg)
-            ],
-            'trend' => $trend,
-            'categories' => $categories
-        ]
-    ]);
-    break;
-            
-            // Debug - you can remove this after confirming it works
-            error_log("Period: $period, Start: $start_date, End: $end_date");
-            
-            // Get income
+        // Debug - you can remove this after confirming it works
+        error_log("Period: $period, Start: $start_date, End: $end_date");
+        
+        // Get income
+        $stmt = $conn->prepare("
+            SELECT COALESCE(SUM(amount), 0) as total 
+            FROM transactions 
+            WHERE user_id = ? AND type = 'income' 
+            AND transaction_date BETWEEN ? AND ?
+        ");
+        $stmt->bind_param("iss", $user_id, $start_date, $end_date);
+        $stmt->execute();
+        $income = $stmt->get_result()->fetch_assoc()['total'];
+        
+        // Get expenses
+        $stmt = $conn->prepare("
+            SELECT COALESCE(SUM(amount), 0) as total 
+            FROM transactions 
+            WHERE user_id = ? AND type = 'expense' 
+            AND transaction_date BETWEEN ? AND ?
+        ");
+        $stmt->bind_param("iss", $user_id, $start_date, $end_date);
+        $stmt->execute();
+        $expenses = $stmt->get_result()->fetch_assoc()['total'];
+        
+        $savings = $income - $expenses;
+        $days = max(1, (strtotime($end_date) - strtotime($start_date)) / (60 * 60 * 24));
+        $daily_avg = $expenses / $days;
+        
+        // FIXED: Get trend data - GROUP BY DAY for current/last month, BY MONTH for longer periods
+        if ($period === 'current' || $period === 'last') {
+            // Group by DAY for current month and last month
             $stmt = $conn->prepare("
-                SELECT COALESCE(SUM(amount), 0) as total 
-                FROM transactions 
-                WHERE user_id = ? AND type = 'income' 
-                AND transaction_date BETWEEN ? AND ?
-            ");
-            $stmt->bind_param("iss", $user_id, $start_date, $end_date);
-            $stmt->execute();
-            $income = $stmt->get_result()->fetch_assoc()['total'];
-            
-            // Get expenses
-            $stmt = $conn->prepare("
-                SELECT COALESCE(SUM(amount), 0) as total 
-                FROM transactions 
-                WHERE user_id = ? AND type = 'expense' 
-                AND transaction_date BETWEEN ? AND ?
-            ");
-            $stmt->bind_param("iss", $user_id, $start_date, $end_date);
-            $stmt->execute();
-            $expenses = $stmt->get_result()->fetch_assoc()['total'];
-            
-            $savings = $income - $expenses;
-            $days = max(1, (strtotime($end_date) - strtotime($start_date)) / (60 * 60 * 24));
-            $daily_avg = $expenses / $days;
-            
-            // Get trend data
-            $stmt = $conn->prepare("
-                SELECT DATE_FORMAT(transaction_date, '%Y-%m') as month,
+                SELECT DATE(transaction_date) as period,
                     SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END) as income,
                     SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) as expenses
                 FROM transactions
                 WHERE user_id = ? AND transaction_date BETWEEN ? AND ?
-                GROUP BY month
-                ORDER BY month
+                GROUP BY DATE(transaction_date)
+                ORDER BY period
             ");
-            $stmt->bind_param("iss", $user_id, $start_date, $end_date);
-            $stmt->execute();
-            $result = $stmt->get_result();
-            
-            $trend = ['labels' => [], 'income' => [], 'expenses' => []];
-            while ($row = $result->fetch_assoc()) {
-                $trend['labels'][] = $row['month'];
-                $trend['income'][] = floatval($row['income']);
-                $trend['expenses'][] = floatval($row['expenses']);
-            }
-            
-            // Get category breakdown
+        } else {
+            // Group by MONTH for 3 months, 6 months, year
             $stmt = $conn->prepare("
-                SELECT c.name, c.icon, c.color, SUM(t.amount) as total
-                FROM transactions t
-                JOIN categories c ON t.category_id = c.id
-                WHERE t.user_id = ? AND t.type = 'expense'
-                AND t.transaction_date BETWEEN ? AND ?
-                GROUP BY c.id
-                ORDER BY total DESC
+                SELECT DATE_FORMAT(transaction_date, '%Y-%m') as period,
+                    SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END) as income,
+                    SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) as expenses
+                FROM transactions
+                WHERE user_id = ? AND transaction_date BETWEEN ? AND ?
+                GROUP BY period
+                ORDER BY period
             ");
-            $stmt->bind_param("iss", $user_id, $start_date, $end_date);
-            $stmt->execute();
-            $result = $stmt->get_result();
-            
-            $categories = [];
-            $total_expenses = floatval($expenses);
-            
-            while ($row = $result->fetch_assoc()) {
-                $categories[] = [
-                    'name' => $row['name'],
-                    'icon' => $row['icon'],
-                    'color' => $row['color'],
-                    'total' => floatval($row['total']),
-                    'percentage' => $total_expenses > 0 ? (floatval($row['total']) / $total_expenses) * 100 : 0
-                ];
-            }
+        }
         
+        $stmt->bind_param("iss", $user_id, $start_date, $end_date);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        
+        $trend = ['labels' => [], 'income' => [], 'expenses' => []];
+        while ($row = $result->fetch_assoc()) {
+            // Format the label based on period type
+            if ($period === 'current' || $period === 'last') {
+                // Format as "Jan 1", "Jan 2", etc. for daily view
+                $date = new DateTime($row['period']);
+                $trend['labels'][] = $date->format('M j'); // "Jan 1", "Jan 2"
+            } else {
+                // Format as "Jan", "Feb", etc. for monthly view
+                $date = new DateTime($row['period'] . '-01');
+                $trend['labels'][] = $date->format('M Y'); // "Jan 2026", "Feb 2026"
+            }
+            
+            $trend['income'][] = floatval($row['income']);
+            $trend['expenses'][] = floatval($row['expenses']);
+        }
+        
+        // Get category breakdown
+        $stmt = $conn->prepare("
+            SELECT c.name, c.icon, c.color, SUM(t.amount) as total
+            FROM transactions t
+            JOIN categories c ON t.category_id = c.id
+            WHERE t.user_id = ? AND t.type = 'expense'
+            AND t.transaction_date BETWEEN ? AND ?
+            GROUP BY c.id
+            ORDER BY total DESC
+        ");
+        $stmt->bind_param("iss", $user_id, $start_date, $end_date);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        
+        $categories = [];
+        $total_expenses = floatval($expenses);
+        
+        while ($row = $result->fetch_assoc()) {
+            $categories[] = [
+                'name' => $row['name'],
+                'icon' => $row['icon'],
+                'color' => $row['color'],
+                'total' => floatval($row['total']),
+                'percentage' => $total_expenses > 0 ? (floatval($row['total']) / $total_expenses) * 100 : 0
+            ];
+        }
+
         echo json_encode([
             'success' => true,
             'data' => [
@@ -833,21 +763,6 @@ case 'get_reports':
                     'start' => $start_date,
                     'end' => $end_date
                 ],
-                'summary' => [
-                    'income' => floatval($income),
-                    'expenses' => floatval($expenses),
-                    'savings' => floatval($savings),
-                    'daily_avg' => floatval($daily_avg)
-                ],
-                'trend' => $trend,
-                'categories' => $categories
-            ]
-        ]);
-        break;
-        
-        echo json_encode([
-            'success' => true,
-            'data' => [
                 'summary' => [
                     'income' => floatval($income),
                     'expenses' => floatval($expenses),
