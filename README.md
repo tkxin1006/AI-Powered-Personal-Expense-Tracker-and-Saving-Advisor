@@ -1,9 +1,5 @@
-# AI-Powered-Personal-Expense-Tracker-and-Saving-Advisor
-AI-driven personal expense tracker and saving advisor. The platform implements an automated categorization engine using NLP to seamlessly track income, manage budgets, and offer personalized financial insights.
-
 # AI-Powered Personal Expense Tracker and Saving Advisor
-
-This document provides instructions on how to set up, configure, and execute the Finance Tracker application on your local machine.
+AI-driven personal expense tracker and saving advisor. The platform implements an automated categorization engine using NLP to seamlessly track income, manage budgets, and offer personalized financial insights.
 
 ## 🛠️ Required Tools
 
