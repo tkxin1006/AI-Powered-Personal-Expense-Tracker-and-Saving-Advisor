@@ -42,11 +42,11 @@ Follow these steps carefully to execute the source code on your local environmen
 1. Locate your XAMPP installation directory (typically `C:\xampp\` on Windows or `/Applications/XAMPP/` on Mac).
 2. Open the `htdocs` folder.
 3. Create a new folder named `finance-tracker` inside `htdocs`.
-4. Copy all of the provided project files (e.g., `api.php`, `dashboard.php`, `style.css`, `app.js`, etc.) into this new `finance-tracker` folder.
+4. Copy all of the provided project files (e.g., `api.php`, `dashboard.php`, `style.css`, `app.js`, etc.) into this new `AI-Powered Personal Expense Tracker and Saving Advisor` folder.
 
 ### Step 4: Install PHP Dependencies
 1. Open your computer's terminal or command prompt.
-2. Navigate to the project directory: `cd C:\xampp\htdocs\finance-tracker` (adjust the path based on your OS).
+2. Navigate to the project directory: `cd C:\xampp\htdocs\AI-Powered Personal Expense Tracker and Saving Advisor` (adjust the path based on your OS).
 3. Run the following command to install PHPMailer: 
    ```bash
    composer install
